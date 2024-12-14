@@ -22,14 +22,12 @@ def test_create_same_user_twice():
         "clientName": fake.name(),
         "clientEmail": fake.email(),
     }
-    response = requests.post(url, json=payload)
+    requests.post(url, json=payload)
 
-    print(response.json())
     url = BASE_URL + "/api-clients/"
-
     response = requests.post(url, json=payload)
-    print(response.json())
     error_message = response.json().get('error')
+
     assert error_message == 'API client already registered. Try a different email.', f"Unexpected error message: {error_message}"
     assert response.status_code == 409
 
@@ -42,15 +40,15 @@ def test_create_user_same_client_name():
     }
     response = requests.post(url, json=payload)
     client_name = response.json().get('clientName')
-    print(response.json())
+
     url = BASE_URL + "/api-clients/"
     payload = {
         "clientName": client_name,
         "clientEmail": fake.email(),
     }
     response = requests.post(url, json=payload)
-    print(response.json())
     error_message = response.json().get('error')
+
     assert error_message == 'Invalid or missing client name.', f"Unexpected error message: {error_message}"
     assert response.status_code == 400
 
@@ -63,15 +61,15 @@ def test_create_user_same_email():
     }
     response = requests.post(url, json=payload)
     client_email = response.json().get('clientEmail')
-    print(response.json())
+
     url = BASE_URL + "/api-clients/"
     payload = {
         "clientName": fake.name(),
         "clientEmail": client_email,
     }
     response = requests.post(url, json=payload)
-    print(response.json())
     error_message = response.json().get('error')
+
     assert error_message == 'Invalid or missing client email.', f"Unexpected error message: {error_message}"
     assert response.status_code == 400
 
@@ -81,8 +79,8 @@ def test_create_user_no_client_name():
         "clientEmail": fake.email(),
     }
     response = requests.post(url, json=payload)
-    print(response.json())
     error_message = response.json().get('error')
+
     assert error_message == 'Invalid or missing client name.', f"Unexpected error message: {error_message}"
     assert response.status_code == 400
 
@@ -92,8 +90,7 @@ def test_create_user_no_email():
         "clientName": fake.name(),
     }
     response = requests.post(url, json=payload)
-    print(response.json())
     error_message = response.json().get('error')
+
     assert error_message == 'Invalid or missing client email.', f"Unexpected error message: {error_message}"
     assert response.status_code == 400
-

@@ -6,6 +6,7 @@ from config import BASE_URL
 
 fake = Faker() #to instantiate the Faker class
 
+
 @pytest.fixture
 def auth_token():
     url = BASE_URL + "/api-clients/"
@@ -21,9 +22,11 @@ def auth_token():
         'token': response.json().get('accessToken')
         }
 
+
 @pytest.fixture
 def headers(auth_token):
     return {"Authorization": f"Bearer {auth_token['token']}"}
+
 
 @pytest.fixture
 def create_order(auth_token, headers):
@@ -40,4 +43,3 @@ def create_order(auth_token, headers):
         'book_id': payload['bookId'],
         'customer_name': payload['customerName'],
     }
-

@@ -12,7 +12,6 @@ def test_create_order(auth_token, headers):
         'customerName': client_name,
     }
     response = requests.post(url, headers=headers, json=payload)
-    print(response.json())
 
     assert response.json().get('created'), f"Expected 'created' to be True, but got {response.json().get('created')}"
     assert response.json().get('orderId'), "Expected 'orderId' to be non-empty"
@@ -26,15 +25,37 @@ def test_create_order_no_auth():
             "customerName": fake.name()
     }
     response = requests.post(url, json=payload)
-
     error_message = response.json().get('error')
+
     assert error_message == 'Missing Authorization header.', f"Unexpected error message: {error_message}"
     assert response.status_code == 401
 
 
+def test_check_order_in_list_of_orders(create_order, headers):
+    """verify when an order is created it exists in the list of orders"""
+    order_id = create_order['order_id']
+    book_id = create_order['book_id']
+    customer_name = create_order['customer_name']
+    url = BASE_URL + '/orders'
+    response = requests.get(url, headers=headers)
+    orders = response.json()
+    matching_order = None
+    for order in orders:
+        if order.get('id') == order_id:
+            matching_order = order
+            break
+
+    assert matching_order, f"Order with ID {order_id} not found in the list of orders"
+    assert matching_order.get('bookId') == book_id, (
+        f"Expected bookId {book_id}, got {matching_order.get('bookId')}"
+    )
+    assert matching_order.get('customerName') == customer_name, (
+        f"Expected customerName {customer_name}, got {matching_order.get('customerName')}"
+    )
+
+
 def test_get_order(create_order, headers):
     """verify the endpoint gets order details for a valid order ID"""
-
     order_id = create_order['order_id']
     book_id = create_order['book_id']
     customer_name = create_order['customer_name']
@@ -66,6 +87,7 @@ def test_update_order(create_order, headers):
     }
     updated_name = payload['customerName']
     response = requests.patch(url, headers=headers, json=payload)
+
     assert response.status_code == 204
 
     url = BASE_URL + f'/orders/{order_id}'
@@ -87,4 +109,3 @@ def test_delete_order(create_order, headers):
 
     assert response.json().get('error') == f'No order with id {order_id}.'
     assert response.status_code == 404
-

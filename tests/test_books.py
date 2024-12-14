@@ -59,9 +59,7 @@ def test_get_a_single_book_invalid_id():
     book_id = fake.random_int(min=21)
     url = BASE_URL + f'/books/{book_id}'
     response = requests.get(url)
-
-    print(response.json())
     error_message = response.json().get('error')
+
     assert error_message == f'No book with id {book_id}', \
         f"Expected error message 'No book with id {book_id}', but got {error_message}"
-

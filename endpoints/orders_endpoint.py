@@ -4,7 +4,7 @@ class OrdersEndpoint:
     def __init__(self, base_url):
         self.base_url = base_url
 
-    def create_order(self, book_id, customer_name, headers):
+    def create_order(self, book_id, customer_name, headers=None):
         """create a new order"""
         url = f"{self.base_url}/orders"
         payload = {

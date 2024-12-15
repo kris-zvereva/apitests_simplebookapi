@@ -1,8 +1,10 @@
 import requests
 
+
 class OrdersEndpoint:
     def __init__(self, base_url):
         self.base_url = base_url
+
 
     def create_order(self, book_id, customer_name, headers=None):
         """create a new order"""
@@ -35,4 +37,3 @@ class OrdersEndpoint:
     def delete_order(self, order_id, headers):
         url = f"{self.base_url}/orders/{order_id}"
         return requests.delete(url, headers=headers)
-

@@ -1,5 +1,3 @@
-import requests
-from config import BASE_URL
 from tests.conftest import fake, auth_token
 
 

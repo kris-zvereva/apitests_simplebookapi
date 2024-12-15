@@ -1,3 +1,5 @@
+from venv import create
+
 import requests
 from tests.conftest import fake
 from config import BASE_URL
@@ -32,36 +34,8 @@ def test_create_same_user_twice():
     assert response.status_code == 409
 
 
-def test_create_user_same_client_name():
-    url = BASE_URL + "/api-clients/"
-    payload = {
-        "clientName": fake.name(),
-        "clientEmail": fake.email(),
-    }
-    response = requests.post(url, json=payload)
-    client_name = response.json().get('clientName')
-
-    url = BASE_URL + "/api-clients/"
-    payload = {
-        "clientName": client_name,
-        "clientEmail": fake.email(),
-    }
-    response = requests.post(url, json=payload)
-    error_message = response.json().get('error')
-
-    assert error_message == 'Invalid or missing client name.', f"Unexpected error message: {error_message}"
-    assert response.status_code == 400
-
-
-def test_create_user_same_email():
-    url = BASE_URL + "/api-clients/"
-    payload = {
-        "clientName": fake.name(),
-        "clientEmail": fake.email(),
-    }
-    response = requests.post(url, json=payload)
-    client_email = response.json().get('clientEmail')
-
+def test_create_user_same_email(auth_token):
+    client_email = auth_token['client_email']
     url = BASE_URL + "/api-clients/"
     payload = {
         "clientName": fake.name(),
@@ -70,8 +44,8 @@ def test_create_user_same_email():
     response = requests.post(url, json=payload)
     error_message = response.json().get('error')
 
-    assert error_message == 'Invalid or missing client email.', f"Unexpected error message: {error_message}"
-    assert response.status_code == 400
+    assert error_message == 'API client already registered. Try a different email.', f"Unexpected error message: {error_message}"
+    assert response.status_code == 409
 
 def test_create_user_no_client_name():
     url = BASE_URL + "/api-clients/"

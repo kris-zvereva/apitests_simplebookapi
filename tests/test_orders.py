@@ -1,6 +1,6 @@
 import requests
 from config import BASE_URL
-from tests.conftest import fake
+from tests.conftest import fake, auth_token
 
 
 def test_create_order(auth_token, headers):
@@ -28,6 +28,24 @@ def test_create_order_no_auth():
     error_message = response.json().get('error')
 
     assert error_message == 'Missing Authorization header.', f"Unexpected error message: {error_message}"
+    assert response.status_code == 401
+
+
+def test_create_order_old_auth():
+    """verify the endpoint returns 401 when no auth token is provided"""
+    url = BASE_URL + "/orders"
+    payload = {
+            "bookId": fake.random_int(min=1, max=6),
+            "customerName": fake.name()
+    }
+    fake_token = fake.sha256()
+    headers = {
+        "Authorization": f"Bearer {fake_token}"
+    }
+    response = requests.post(url, headers=headers, json=payload)
+    error_message = response.json().get('error')
+    print(response.json())
+    assert error_message == 'Invalid bearer token.', f"Unexpected error message: {error_message}"
     assert response.status_code == 401
 
 
@@ -80,6 +98,7 @@ def test_get_order_invalid_id(headers):
 
 
 def test_update_order(create_order, headers):
+    """verify the endpoint allows updating order's customer name"""
     order_id = create_order['order_id']
     url = BASE_URL + f'/orders/{order_id}'
     payload = {
@@ -98,12 +117,18 @@ def test_update_order(create_order, headers):
 
 
 def test_delete_order(create_order, headers):
+    """verify the endpoint supports deleting an order"""
     order_id = create_order['order_id']
     url = BASE_URL + f'/orders/{order_id}'
     response = requests.delete(url, headers=headers)
 
     assert response.status_code == 204
 
+def test_get_deleted_order(create_order, headers):
+    """verify accessing a deleted order returns a 404 with the error message"""
+    order_id = create_order['order_id']
+    url = BASE_URL + f'/orders/{order_id}'
+    requests.delete(url, headers=headers)
     url = BASE_URL + f'/orders/{order_id}'
     response = requests.get(url, headers=headers)
 

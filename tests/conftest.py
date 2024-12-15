@@ -15,7 +15,6 @@ def auth_token():
         "clientEmail": fake.email(),
     }
     response = requests.post(url, json=payload)
-
     return {
         'client_name': payload.get('clientName'),
         'client_email': payload.get('clientEmail'),

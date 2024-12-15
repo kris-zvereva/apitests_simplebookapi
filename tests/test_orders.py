@@ -3,59 +3,50 @@ from config import BASE_URL
 from tests.conftest import fake, auth_token
 
 
-def test_create_order(auth_token, headers):
+def test_create_order(auth_token, headers, orders_endpoint):
     """verify a new order is created"""
     client_name = auth_token['client_name']
-    url = BASE_URL + '/orders'
-    payload = {
-        'bookId': 1,
-        'customerName': client_name,
-    }
-    response = requests.post(url, headers=headers, json=payload)
+    book_id = fake.random_int(min=1, max=6),
+    response = orders_endpoint.create_order(book_id, customer_name=client_name, headers=headers)
 
     assert response.json().get('created'), f"Expected 'created' to be True, but got {response.json().get('created')}"
     assert response.json().get('orderId'), "Expected 'orderId' to be non-empty"
 
 
-def test_create_order_no_auth():
+def test_create_order_no_auth(orders_endpoint):
     """verify the endpoint returns 401 when no auth token is provided"""
-    url = BASE_URL + "/orders"
-    payload = {
-            "bookId": fake.random_int(min=1, max=6),
-            "customerName": fake.name()
-    }
-    response = requests.post(url, json=payload)
+    book_id = fake.random_int(min=1, max=6),
+    customer_name = fake.name()
+    response = orders_endpoint.create_order(book_id, customer_name=customer_name)
     error_message = response.json().get('error')
 
     assert error_message == 'Missing Authorization header.', f"Unexpected error message: {error_message}"
     assert response.status_code == 401
 
 
-def test_create_order_old_auth():
+def test_create_order_old_auth(orders_endpoint):
     """verify the endpoint returns 401 when no auth token is provided"""
-    url = BASE_URL + "/orders"
-    payload = {
-            "bookId": fake.random_int(min=1, max=6),
-            "customerName": fake.name()
-    }
-    fake_token = fake.sha256()
+    book_id = fake.random_int(min=1, max=6),
+    customer_name = fake.name()
     headers = {
-        "Authorization": f"Bearer {fake_token}"
+        "Authorization": f"Bearer {fake.sha256()}"
     }
-    response = requests.post(url, headers=headers, json=payload)
+    response = orders_endpoint.create_order(book_id, customer_name=customer_name, headers=headers)
     error_message = response.json().get('error')
-    print(response.json())
+
     assert error_message == 'Invalid bearer token.', f"Unexpected error message: {error_message}"
     assert response.status_code == 401
 
 
-def test_check_order_in_list_of_orders(create_order, headers):
+def test_check_order_in_list_of_orders(auth_token, headers, orders_endpoint):
     """verify when an order is created it exists in the list of orders"""
-    order_id = create_order['order_id']
-    book_id = create_order['book_id']
-    customer_name = create_order['customer_name']
-    url = BASE_URL + '/orders'
-    response = requests.get(url, headers=headers)
+    customer_name = auth_token['client_name']
+    book_id = fake.random_int(min=1, max=6)
+    response = orders_endpoint.create_order(book_id, customer_name=customer_name, headers=headers)
+    created_order = response.json()
+    order_id = created_order['orderId']
+
+    response = orders_endpoint.get_list_of_orders(headers=headers)
     orders = response.json()
     matching_order = None
     for order in orders:
@@ -72,14 +63,15 @@ def test_check_order_in_list_of_orders(create_order, headers):
     )
 
 
-def test_get_order(create_order, headers):
+def test_get_order_by_id(auth_token, orders_endpoint, headers):
     """verify the endpoint gets order details for a valid order ID"""
-    order_id = create_order['order_id']
-    book_id = create_order['book_id']
-    customer_name = create_order['customer_name']
+    customer_name = auth_token['client_name']
+    book_id = fake.random_int(min=1, max=6)
+    response = orders_endpoint.create_order(book_id, customer_name=customer_name, headers=headers)
+    created_order = response.json()
+    order_id = created_order['orderId']
 
-    url = BASE_URL + f'/orders/{order_id}'
-    response = requests.get(url, headers=headers)
+    response = orders_endpoint.get_order_by_id(order_id, headers=headers)
     response_data = response.json()
 
     assert response_data.get('bookId') == book_id
@@ -87,50 +79,53 @@ def test_get_order(create_order, headers):
     assert response.status_code == 200, f"Expected 200 status code, got {response.status_code}"
 
 
-def test_get_order_invalid_id(headers):
+def test_get_order_invalid_id(headers, orders_endpoint):
     """verify the endpoint returns 404 when accessing an order with an invalid ID"""
     order_id = fake.uuid4().replace('-', '')[:21]
-    url = BASE_URL + f'/orders/{order_id}'
-    response = requests.get(url, headers=headers)
+    response = orders_endpoint.get_order_by_id(order_id, headers=headers)
 
     assert response.json().get('error') == f'No order with id {order_id}.'
     assert response.status_code == 404
 
 
-def test_update_order(create_order, headers):
+def test_update_order(auth_token, headers, orders_endpoint):
     """verify the endpoint allows updating order's customer name"""
-    order_id = create_order['order_id']
-    url = BASE_URL + f'/orders/{order_id}'
-    payload = {
-        'customerName': fake.name()
-    }
-    updated_name = payload['customerName']
-    response = requests.patch(url, headers=headers, json=payload)
+    customer_name = auth_token['client_name']
+    book_id = fake.random_int(min=1, max=6)
+    response = orders_endpoint.create_order(book_id, customer_name=customer_name, headers=headers)
+    created_order = response.json()
+    order_id = created_order['orderId']
+    updated_name = fake.name()
+    response = orders_endpoint.update_order(order_id, updated_name, headers=headers)
 
     assert response.status_code == 204
 
-    url = BASE_URL + f'/orders/{order_id}'
-    response = requests.get(url, headers=headers)
-
+    response = orders_endpoint.get_order_by_id(order_id, headers=headers)
+    print(response.json())
     assert response.json().get('customerName') == updated_name, \
         f"Expected customerName equals {updated_name}, got {response.json().get('customerName')}"
 
 
-def test_delete_order(create_order, headers):
+def test_delete_order(auth_token, headers, orders_endpoint):
     """verify the endpoint supports deleting an order"""
-    order_id = create_order['order_id']
-    url = BASE_URL + f'/orders/{order_id}'
-    response = requests.delete(url, headers=headers)
+    customer_name = auth_token['client_name']
+    book_id = fake.random_int(min=1, max=6)
+    response = orders_endpoint.create_order(book_id, customer_name=customer_name, headers=headers)
+    created_order = response.json()
+    order_id = created_order['orderId']
+    response = orders_endpoint.delete_order(order_id, headers=headers)
 
     assert response.status_code == 204
 
-def test_get_deleted_order(create_order, headers):
+def test_get_deleted_order(auth_token, headers, orders_endpoint):
     """verify accessing a deleted order returns a 404 with the error message"""
-    order_id = create_order['order_id']
-    url = BASE_URL + f'/orders/{order_id}'
-    requests.delete(url, headers=headers)
-    url = BASE_URL + f'/orders/{order_id}'
-    response = requests.get(url, headers=headers)
+    customer_name = auth_token['client_name']
+    book_id = fake.random_int(min=1, max=6)
+    response = orders_endpoint.create_order(book_id, customer_name=customer_name, headers=headers)
+    created_order = response.json()
+    order_id = created_order['orderId']
+    orders_endpoint.delete_order(order_id, headers=headers)
+    response = orders_endpoint.get_order_by_id(order_id, headers=headers)
 
     assert response.json().get('error') == f'No order with id {order_id}.'
     assert response.status_code == 404

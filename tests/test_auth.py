@@ -1,5 +1,3 @@
-from venv import create
-
 import requests
 from tests.conftest import fake
 from config import BASE_URL

@@ -2,7 +2,8 @@ import pytest
 import requests
 from faker import Faker
 from config import BASE_URL
-
+from endpoints.books_endpoint import BooksEndpoint
+from endpoints.orders_endpoint import OrdersEndpoint
 
 fake = Faker() #to instantiate the Faker class
 
@@ -28,17 +29,13 @@ def headers(auth_token):
 
 
 @pytest.fixture
-def create_order(auth_token, headers):
-    client_name = auth_token['client_name']
-    url = BASE_URL + '/orders'
-    payload = {
-        'bookId': fake.random_int(min=1, max=6),
-        'customerName': client_name,
-    }
-    response = requests.post(url, headers=headers, json=payload)
+def books_endpoint():
+    """fixture to create a BooksEndpoint instance"""
+    return BooksEndpoint(BASE_URL)
 
-    return {
-        'order_id': response.json().get('orderId'),
-        'book_id': payload['bookId'],
-        'customer_name': payload['customerName'],
-    }
+
+@pytest.fixture
+def orders_endpoint():
+    """fixture to create an OrdersEndpoint instance"""
+    return OrdersEndpoint(BASE_URL)
+
